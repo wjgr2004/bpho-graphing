@@ -5,9 +5,12 @@ import csv
 import math
 import numpy as np
 from PyQt6 import QtWidgets as qtw
+from functools import partial
 import scipy
 import scipy.stats
-import graphing_functions as graph_func
+import transforming_functions as transform_func
+import model_functions as model_func
+import plotting_functions as plot_func
 
 
 def mean(vals):
@@ -45,6 +48,9 @@ class GraphWindow(qtw.QMainWindow):
 
         self.filename = None
 
+        self.min = None
+        self.max = None
+
         plt.style.use("seaborn-whitegrid")
 
         self.handles = []
@@ -67,7 +73,7 @@ class GraphWindow(qtw.QMainWindow):
 
         super().__init__()
 
-        self.setFixedSize(250, 490)
+        self.setFixedSize(250, 560)
         self.setWindowTitle("Graph Generator")
 
         self.layout = qtw.QFormLayout()
@@ -76,23 +82,23 @@ class GraphWindow(qtw.QMainWindow):
         self.ingest_button.clicked.connect(self.ingest)
         self.layout.addWidget(self.ingest_button)
 
+        self.drop_y_func = qtw.QComboBox()
+        self.drop_y_func.addItems(transform_func.function_dict.keys())
+        self.layout.addRow("y-func", self.drop_y_func)
+
+        self.drop_y_vals = qtw.QComboBox()
+        self.layout.addRow("y-val", self.drop_y_vals)
+
         self.drop_x_func = qtw.QComboBox()
-        self.drop_x_func.addItems(graph_func.function_dict.keys())
-        self.drop_x_func.setEditable(False)
+        self.drop_x_func.addItems(transform_func.function_dict.keys())
         self.layout.addRow("x-func", self.drop_x_func)
 
         self.drop_x_vals = qtw.QComboBox()
         self.layout.addRow("x-val", self.drop_x_vals)
 
-        self.drop_y_func = qtw.QComboBox()
-        self.drop_y_func.addItems(graph_func.function_dict.keys())
-        self.layout.addRow("y-func", self.drop_y_func)
-
-        self.y_val_widget = qtw.QWidget()
-        self.y_val_layout = qtw.QHBoxLayout()
-
-        self.drop_y_vals = qtw.QComboBox()
-        self.layout.addRow("y-val", self.drop_y_vals)
+        self.drop_line_type = qtw.QComboBox()
+        self.drop_line_type.addItems(plot_func.plotting_dict.keys())
+        self.layout.addRow("Plot type: ", self.drop_line_type)
 
         self.line_button = qtw.QCheckBox("Line of Best Fit")
         self.layout.addWidget(self.line_button)
@@ -102,9 +108,6 @@ class GraphWindow(qtw.QMainWindow):
 
         self.scale_button = qtw.QCheckBox("Scale y-axis")
         self.layout.addWidget(self.scale_button)
-
-        self.scatter_button = qtw.QCheckBox("Force Scatter")
-        self.layout.addWidget(self.scatter_button)
 
         self.line_label = qtw.QLineEdit()
         self.layout.addRow("Label", self.line_label)
@@ -129,6 +132,14 @@ class GraphWindow(qtw.QMainWindow):
         self.generate_button = qtw.QPushButton("Update Titles")
         self.generate_button.clicked.connect(self.generate_graph)
         self.layout.addWidget(self.generate_button)
+
+        self.plot_drop_down = qtw.QComboBox()
+        self.plot_drop_down.addItems(model_func.plotting_dict.keys())
+        self.layout.addRow("Model Type: ", self.plot_drop_down)
+
+        self.plot_button = qtw.QPushButton("Add Model")
+        self.plot_button.clicked.connect(self.add_line_plot)
+        self.layout.addWidget(self.plot_button)
 
         self.widget = qtw.QWidget()
         self.widget.setLayout(self.layout)
@@ -156,38 +167,68 @@ class GraphWindow(qtw.QMainWindow):
                     qtw.QMessageBox.StandardButton.Ok)
             else:
                 with open(self.filename, "r") as file:
-                    flag = False
                     data_dict = csv.DictReader(file)
 
-                    x = []
-                    y = []
+                    flag = False
+
+                    x = [[]]
+                    x_list = []
+                    y = [[]]
+                    y_list = []
                     x_name = self.drop_x_vals.currentText()
                     y_name = self.drop_y_vals.currentText()
                     for row in data_dict:
                         try:
-                            x.append(graph_func.function_dict[self.drop_x_func.currentText()](float(row[x_name])))
+                            x_val = transform_func.function_dict[
+                                             self.drop_x_func.currentText()](float(row[x_name]))
+                            x[-1].append(x_val)
+                            x_list.append(x_val)
                             try:
-                                y.append(graph_func.function_dict[self.drop_y_func.currentText()](float(row[y_name])))
+                                y_val = transform_func.function_dict[
+                                    self.drop_y_func.currentText()](float(row[y_name]))
+                                y[-1].append(y_val)
+                                y_list.append(y_val)
                                 flag = True
                             except (ValueError, ZeroDivisionError):
-                                x.pop()
+                                x[-1].pop()
+                                x_list.pop()
+                                if x[-1]:
+                                    x.append([])
+                                    y.append([])
                         except (ValueError, ZeroDivisionError):
-                            pass
+                            if x[-1]:
+                                x.append([])
+                                y.append([])
 
                 if flag:
 
                     if self.scale_button.isChecked():
-                        y_bar = statistics.mean(y)
-                        print(y_bar)
-                        y_std_dev = statistics.stdev(y)
-                        y = list(map(lambda y: (y - y_bar) / y_std_dev, y))
+                        y_bar = statistics.mean(y_list)
+                        y_std_dev = statistics.stdev(y_list)
+                        for section in y:
+                            for i in range(len(section)):
+                                if y_std_dev != 0:
+                                    section[i] = (section[i] - y_bar) / y_std_dev
+                                else:
+                                    section[i] = (section[i] - y_bar)
 
                     if self.line_label.text():
                         name = self.line_label.text()
                     else:
                         name = f"{y_name} vs {x_name}"
 
-                    self.lines.append([x, y, self.line_button.isChecked(), name, self.rank_button.isChecked()])
+                    colours = self.colours[self.cycle]
+                    self.cycle = (self.cycle + 1) % len(self.colours)
+                    self.lines.append([
+                        x, y, self.line_button.isChecked(), self.rank_button.isChecked(),
+                        colours, name, plot_func.plotting_dict[self.drop_line_type.currentText()], "data"])
+
+                    if self.max is not None:
+                        self.max = max(*x_list, self.max)
+                        self.min = min(*x_list, self.min)
+                    else:
+                        self.max = max(*x_list)
+                        self.min = min(*x_list)
 
                     self.ax.clear()
                     self.generate_graph()
@@ -210,54 +251,33 @@ class GraphWindow(qtw.QMainWindow):
                 qtw.QMessageBox.StandardButton.Ok)
 
     def clear_graph(self):
+        self.cycle = 0
         self.lines = []
         self.ax.clear()
+        self.max = None
+        self.min = None
+
+    def add_line_plot(self):
+        draw_func, label_func, args = model_func.plotting_dict[self.plot_drop_down.currentText()]
+        plot_window = PlotWindow(self, draw_func, label_func, *args)
+        plot_window.show()
 
     def generate_graph(self):
-        self.cycle = 0
         self.handles = []
 
-        for x, y, show_best_fit, label, show_rank in self.lines:
-            x2 = np.array(x)
-            y2 = np.array(y)
+        for line in self.lines:
+            if line[-1] == "data":
+                self.handles += line[-2](*line[:-2])
 
-            if show_rank:
-                r, p = scipy.stats.pearsonr(x, y)
-                rank_text = f"\nr = {r:.4}, p = {p:.4}"
-            else:
-                rank_text = ""
+            elif self.max is not None:
+                label, draw_func, options, _ = line
+                x, y = draw_func(*options, self.min, self.max)
 
-            colours = self.colours[self.cycle]
-            self.cycle = (self.cycle + 1) % 5
-            if len(x) > 300 and not self.scatter_button.isChecked():
-                line, = plt.plot(x, y, color=colours[0], label=label + rank_text)
-            elif len(x) > 300:
-                line, = plt.plot(x, y, "x", color=colours[0], label=label + rank_text, alpha=.1)
-            elif len(x2) > 50:
-                line, = plt.plot(x, y, "x", color=colours[0], label=label + rank_text, alpha=.7)
-            else:
-                line, = plt.plot(x, y, "x", color=colours[0], label=label + rank_text)
-            self.handles.append(line)
+                colours = self.colours[self.cycle]
+                self.cycle = (self.cycle + 1) % len(self.colours)
 
-            if show_best_fit:
-                min_val = None
-                max_val = None
-                for x_val in x2:
-                    if min_val is None:
-                        min_val = x_val
-                    else:
-                        min_val = min(min_val, x_val)
-                    if max_val is None:
-                        max_val = x_val
-                    else:
-                        max_val = max(max_val, x_val)
-
-                # noinspection PyTupleAssignmentBalance
-                m, c = np.polyfit(x2, y2, 1)
-
-                points = np.array([min_val, max_val])
-                best_fit, = plt.plot(points, m * points + c, label=f"y = {m:.5}x + {c:.5}", color=colours[1])
-                self.handles.append(best_fit)
+                line, = plt.plot(x, y, color=colours[0], label=label)
+                self.handles.append(line)
 
         self.ax.legend(handles=self.handles)
 
@@ -272,6 +292,39 @@ class GraphWindow(qtw.QMainWindow):
         self.ax.set_title(self.title.text())
         self.ax.set_xlabel(self.x_label.text())
         self.ax.set_ylabel(self.y_label.text())
+
+
+class PlotWindow(qtw.QDialog):
+
+    def __init__(self, parent, draw_func, label_func, *options):
+        super().__init__()
+
+        self.parent = parent
+
+        self.layout = qtw.QFormLayout()
+
+        self.input_boxes = []
+        for option in options:
+            self.input_boxes.append(qtw.QLineEdit())
+            self.layout.addRow(option, self.input_boxes[-1])
+
+        self.submit_button = qtw.QPushButton("Submit")
+        self.submit_button.clicked.connect(partial(self.closeEvent, None))
+        self.layout.addWidget(self.submit_button)
+
+        self.widget = qtw.QWidget()
+        self.setLayout(self.layout)
+
+        self.plot_func, self.label_func = draw_func, label_func
+
+    def closeEvent(self, event):
+        options = []
+        for input_box in self.input_boxes:
+            options.append(model_func.convert_to_number(input_box.text()))
+
+        self.parent.lines.append([self.label_func(*options), self.plot_func, options, "model"])
+        self.parent.generate_graph()
+        self.done(0)
 
 
 app = qtw.QApplication([])
