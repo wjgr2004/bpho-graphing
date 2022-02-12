@@ -151,7 +151,12 @@ class GraphWindow(qtw.QMainWindow):
         self.widget.setLayout(self.layout)
         self.setCentralWidget(self.widget)
 
+        self.generate_graph()
+        self.in_window = False
+
     def ingest(self):
+        if self.in_window:
+            return
         self.filename, _ = qtw.QFileDialog.getOpenFileName(self, "Open File", ".", "Csv Files (*.csv)")
         try:
             with open(self.filename, "r") as file:
@@ -264,10 +269,13 @@ class GraphWindow(qtw.QMainWindow):
         self.min = None
 
     def add_model(self):
+        if self.in_window:
+            return
         draw_func, label_func, valid_input, args = model_func.plotting_dict[self.plot_drop_down.currentText()]
         colours = self.colours[self.cycle]
         self.cycle = (self.cycle + 1) % len(self.colours)
         self.plot_window = PlotWindow(self, draw_func, label_func, valid_input, colours, *args)
+        self.in_window = True
         self.plot_window.show()
 
     def generate_graph(self):
@@ -304,8 +312,11 @@ class GraphWindow(qtw.QMainWindow):
         event.accept()
 
     def edit_lines(self):
-        self.edit_window = LineEditWindow(self.lines, self)
-        self.edit_window.show()
+        if self.in_window:
+            return
+        edit_window = LineEditWindow(self.lines, self)
+        self.in_window = True
+        edit_window.show()
 
 
 class PlotWindow(qtw.QWidget):
@@ -347,7 +358,12 @@ class PlotWindow(qtw.QWidget):
         self.plot_func, self.label_func = draw_func, label_func
 
     def cancel(self):
+        self.parent.in_window = False
         self.close()
+
+    def closeEvent(self, event):
+        self.parent.in_window = False
+        event.accept()
 
     def submit(self):
         options = []
@@ -364,6 +380,7 @@ class PlotWindow(qtw.QWidget):
         if self.valid_input(*options):
             self.parent.lines.insert(0, [self.label_func(*options), self.plot_func, options, self.colours, "model"])
             self.parent.generate_graph()
+            self.parent.in_window = False
             self.close()
         else:
             qtw.QMessageBox.warning(
@@ -446,6 +463,10 @@ class LineEditWindow(qtw.QWidget):
     def redraw_graph(self):
         self.parent.ax.clear()
         self.parent.generate_graph()
+
+    def closeEvent(self, event):
+        self.parent.in_window = False
+        event.accept()
 
 
 app = qtw.QApplication([])
