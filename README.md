@@ -1,10 +1,28 @@
 # bpho-graphing
 
-Graphing software for the BPhO Computational Physics Challenge
-More Info at: https://www.bpho.org.uk
+Information:
 
-To add more plot types (eg. scatter, line) edit plotting_functions.py
+  Graphing software for the BPhO Computational Physics Challenge
+  More Info at: https://www.bpho.org.uk
 
-To add more modelling options edit model_functions.py
+Installation Instructions:
 
-To add more functions to edit the data before plotting it edit transformation_functions.py
+   - Install Python 3.10+ - https://www.python.org/downloads/
+
+   - Install Required Packages
+
+      Required Packages:
+       - numpy
+       - scipy
+       - matplotlib
+       - PyQt6
+
+      For information on how to install packages go to https://packaging.python.org/en/latest/tutorials/installing-packages/
+  
+Customising The Software:
+
+  To add more plot types (eg. scatter, line) edit plotting_functions.py
+
+  To add more modelling options edit model_functions.py
+
+  To add more functions to edit the data before plotting it edit transformation_functions.py
