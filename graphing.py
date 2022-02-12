@@ -433,7 +433,7 @@ class LineEditWindow(qtw.QWidget):
         self.options_layout.addWidget(self.move_down_button)
 
         self.close_button = qtw.QPushButton("Close")
-        self.close_button.clicked.connect(self.close)
+        self.close_button.clicked.connect(self.custom_close)
         self.options_layout.addWidget(self.close_button)
 
     def move_line(self, up):
@@ -463,6 +463,10 @@ class LineEditWindow(qtw.QWidget):
     def redraw_graph(self):
         self.parent.ax.clear()
         self.parent.generate_graph()
+
+    def custom_close(self):
+        self.parent.in_window = False
+        self.close()
 
     def closeEvent(self, event):
         self.parent.in_window = False
