@@ -6,8 +6,6 @@ import math
 import numpy as np
 from PyQt6 import QtWidgets as qtw
 from functools import partial
-import scipy
-import scipy.stats
 import transforming_functions as transform_func
 import model_functions as model_func
 import plotting_functions as plot_func
@@ -55,6 +53,8 @@ class GraphWindow(qtw.QMainWindow):
 
         self.handles = []
         self.lines = []
+
+        self.plot_window = None
 
         self.fig, self.ax = plt.subplots(figsize=(14, 10), layout="constrained")
         plt.ion()
@@ -138,7 +138,7 @@ class GraphWindow(qtw.QMainWindow):
         self.layout.addRow("Model Type: ", self.plot_drop_down)
 
         self.plot_button = qtw.QPushButton("Add Model")
-        self.plot_button.clicked.connect(self.add_line_plot)
+        self.plot_button.clicked.connect(self.add_model)
         self.layout.addWidget(self.plot_button)
 
         self.widget = qtw.QWidget()
@@ -257,10 +257,10 @@ class GraphWindow(qtw.QMainWindow):
         self.max = None
         self.min = None
 
-    def add_line_plot(self):
-        draw_func, label_func, args = model_func.plotting_dict[self.plot_drop_down.currentText()]
-        plot_window = PlotWindow(self, draw_func, label_func, *args)
-        plot_window.show()
+    def add_model(self):
+        draw_func, label_func, valid_input, args = model_func.plotting_dict[self.plot_drop_down.currentText()]
+        self.plot_window = PlotWindow(self, draw_func, label_func, valid_input, *args)
+        self.plot_window.show()
 
     def generate_graph(self):
         self.handles = []
@@ -293,38 +293,71 @@ class GraphWindow(qtw.QMainWindow):
         self.ax.set_xlabel(self.x_label.text())
         self.ax.set_ylabel(self.y_label.text())
 
+    def closeEvent(self, event):
+        if self.plot_window is not None:
+            self.plot_window.done(2)
+        event.accept()
+
 
 class PlotWindow(qtw.QDialog):
 
-    def __init__(self, parent, draw_func, label_func, *options):
+    def __init__(self, parent, draw_func, label_func, valid_input, *options):
         super().__init__()
 
         self.parent = parent
+        self.valid_input = valid_input
 
-        self.layout = qtw.QFormLayout()
+        self.layout = qtw.QVBoxLayout()
+
+        self.form_layout = qtw.QFormLayout()
 
         self.input_boxes = []
         for option in options:
             self.input_boxes.append(qtw.QLineEdit())
-            self.layout.addRow(option, self.input_boxes[-1])
+            self.form_layout.addRow(option, self.input_boxes[-1])
+
+        self.layout.addLayout(self.form_layout)
+
+        self.h_box = qtw.QHBoxLayout()
+
+        self.cancel_button = qtw.QPushButton("Cancel")
+        self.cancel_button.clicked.connect(self.cancel)
+        self.h_box.addWidget(self.cancel_button)
 
         self.submit_button = qtw.QPushButton("Submit")
         self.submit_button.clicked.connect(partial(self.closeEvent, None))
-        self.layout.addWidget(self.submit_button)
+        self.h_box.addWidget(self.submit_button)
+
+        self.layout.addLayout(self.h_box)
 
         self.widget = qtw.QWidget()
         self.setLayout(self.layout)
 
         self.plot_func, self.label_func = draw_func, label_func
 
+    def cancel(self):
+        self.done(0)
+
     def closeEvent(self, event):
         options = []
         for input_box in self.input_boxes:
-            options.append(model_func.convert_to_number(input_box.text()))
+            val = model_func.convert_to_number(input_box.text())
+            if val is not False:
+                options.append(val)
+            else:
+                qtw.QMessageBox.warning(
+                    self, "Input Failure", "You didn't input a number.",
+                    qtw.QMessageBox.StandardButton.Ok)
+                return
 
-        self.parent.lines.append([self.label_func(*options), self.plot_func, options, "model"])
-        self.parent.generate_graph()
-        self.done(0)
+        if self.valid_input(*options):
+            self.parent.lines.append([self.label_func(*options), self.plot_func, options, "model"])
+            self.parent.generate_graph()
+            self.done(1)
+        else:
+            qtw.QMessageBox.warning(
+                self, "Input Failure", "You input invalid numbers.",
+                qtw.QMessageBox.StandardButton.Ok)
 
 
 app = qtw.QApplication([])
