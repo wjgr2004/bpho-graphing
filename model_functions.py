@@ -26,7 +26,6 @@ def linear_header(m, c):
 
 def extended_exponential(a, r, c, min_val, max_val):
     x = np.linspace(min_val, max_val, 1000)
-    print(r, (r ** x))
     y = a * (r ** x) + c
     return x, y
 

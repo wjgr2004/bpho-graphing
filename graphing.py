@@ -1,4 +1,6 @@
 import statistics
+import time
+
 import matplotlib.pyplot as plt
 import matplotlib.ticker as tck
 import csv
@@ -73,7 +75,7 @@ class GraphWindow(qtw.QMainWindow):
 
         super().__init__()
 
-        self.setFixedSize(250, 560)
+        self.setFixedSize(250, 600)
         self.setWindowTitle("Graph Generator")
 
         self.layout = qtw.QFormLayout()
@@ -115,6 +117,10 @@ class GraphWindow(qtw.QMainWindow):
         self.add_button = qtw.QPushButton("Add Plot")
         self.add_button.clicked.connect(self.add_plot)
         self.layout.addWidget(self.add_button)
+
+        self.edit_button = qtw.QPushButton("Edit Lines")
+        self.edit_button.clicked.connect(self.edit_lines)
+        self.layout.addWidget(self.edit_button)
 
         self.clear_button = qtw.QPushButton("Clear")
         self.clear_button.clicked.connect(self.clear_graph)
@@ -219,7 +225,7 @@ class GraphWindow(qtw.QMainWindow):
 
                     colours = self.colours[self.cycle]
                     self.cycle = (self.cycle + 1) % len(self.colours)
-                    self.lines.append([
+                    self.lines.insert(0, [
                         x, y, self.line_button.isChecked(), self.rank_button.isChecked(),
                         colours, name, plot_func.plotting_dict[self.drop_line_type.currentText()], "data"])
 
@@ -259,22 +265,21 @@ class GraphWindow(qtw.QMainWindow):
 
     def add_model(self):
         draw_func, label_func, valid_input, args = model_func.plotting_dict[self.plot_drop_down.currentText()]
-        self.plot_window = PlotWindow(self, draw_func, label_func, valid_input, *args)
+        colours = self.colours[self.cycle]
+        self.cycle = (self.cycle + 1) % len(self.colours)
+        self.plot_window = PlotWindow(self, draw_func, label_func, valid_input, colours, *args)
         self.plot_window.show()
 
     def generate_graph(self):
         self.handles = []
 
-        for line in self.lines:
+        for line in reversed(self.lines):
             if line[-1] == "data":
                 self.handles += line[-2](*line[:-2])
 
             elif self.max is not None:
-                label, draw_func, options, _ = line
+                label, draw_func, options, colours, _ = line
                 x, y = draw_func(*options, self.min, self.max)
-
-                colours = self.colours[self.cycle]
-                self.cycle = (self.cycle + 1) % len(self.colours)
 
                 line, = plt.plot(x, y, color=colours[0], label=label)
                 self.handles.append(line)
@@ -298,10 +303,14 @@ class GraphWindow(qtw.QMainWindow):
             self.plot_window.done(2)
         event.accept()
 
+    def edit_lines(self):
+        self.edit_window = LineEditWindow(self.lines, self)
+        self.edit_window.show()
 
-class PlotWindow(qtw.QDialog):
 
-    def __init__(self, parent, draw_func, label_func, valid_input, *options):
+class PlotWindow(qtw.QWidget):
+
+    def __init__(self, parent, draw_func, label_func, valid_input, colours, *options):
         super().__init__()
 
         self.parent = parent
@@ -325,7 +334,7 @@ class PlotWindow(qtw.QDialog):
         self.h_box.addWidget(self.cancel_button)
 
         self.submit_button = qtw.QPushButton("Submit")
-        self.submit_button.clicked.connect(partial(self.closeEvent, None))
+        self.submit_button.clicked.connect(self.submit)
         self.h_box.addWidget(self.submit_button)
 
         self.layout.addLayout(self.h_box)
@@ -333,12 +342,14 @@ class PlotWindow(qtw.QDialog):
         self.widget = qtw.QWidget()
         self.setLayout(self.layout)
 
+        self.colours = colours
+
         self.plot_func, self.label_func = draw_func, label_func
 
     def cancel(self):
-        self.done(0)
+        self.close()
 
-    def closeEvent(self, event):
+    def submit(self):
         options = []
         for input_box in self.input_boxes:
             val = model_func.convert_to_number(input_box.text())
@@ -351,13 +362,90 @@ class PlotWindow(qtw.QDialog):
                 return
 
         if self.valid_input(*options):
-            self.parent.lines.append([self.label_func(*options), self.plot_func, options, "model"])
+            self.parent.lines.insert(0, [self.label_func(*options), self.plot_func, options, self.colours, "model"])
             self.parent.generate_graph()
-            self.done(1)
+            self.close()
         else:
             qtw.QMessageBox.warning(
                 self, "Input Failure", "You input invalid numbers.",
                 qtw.QMessageBox.StandardButton.Ok)
+
+
+class LineEditWindow(qtw.QWidget):
+
+    def __init__(self, lines, parent):
+        super().__init__()
+
+        self.setFixedWidth(400)
+
+        self.layout = qtw.QVBoxLayout()
+        self.setLayout(self.layout)
+
+        self.lines = lines
+        self.parent = parent
+
+        self.line_layouts = []
+
+        self.list_widget = qtw.QListWidget()
+
+        for i, line in enumerate(self.lines):
+            self.line_layouts.append(qtw.QHBoxLayout())
+
+            if line[-1] == "data":
+                name = line[5]
+            else:
+                name = line[0]
+
+            self.list_widget.addItem(name)
+
+        self.layout.addWidget(self.list_widget)
+
+        self.options_layout = qtw.QHBoxLayout()
+        self.layout.addLayout(self.options_layout)
+
+        self.delete_button = qtw.QPushButton("Delete")
+        self.delete_button.clicked.connect(self.delete_line)
+        self.options_layout.addWidget(self.delete_button)
+
+        self.move_up_button = qtw.QPushButton("Move Up")
+        self.move_up_button.clicked.connect(partial(self.move_line, True))
+        self.options_layout.addWidget(self.move_up_button)
+
+        self.move_down_button = qtw.QPushButton("Move Down")
+        self.move_down_button.clicked.connect(partial(self.move_line, False))
+        self.options_layout.addWidget(self.move_down_button)
+
+        self.close_button = qtw.QPushButton("Close")
+        self.close_button.clicked.connect(self.close)
+        self.options_layout.addWidget(self.close_button)
+
+    def move_line(self, up):
+        current_row = self.list_widget.currentRow()
+        if up:
+            new_row = current_row - 1
+        else:
+            new_row = current_row + 1
+        if new_row < 0 or new_row >= len(self.lines):
+            return
+        self.lines[current_row], self.lines[new_row] = self.lines[new_row], self.lines[current_row]
+        item = self.list_widget.item(current_row)
+        self.list_widget.takeItem(current_row)
+        self.list_widget.insertItem(new_row, item)
+        self.list_widget.setCurrentRow(new_row)
+        self.redraw_graph()
+
+    def delete_line(self):
+        currently_selected = self.list_widget.currentItem()
+        current_row = self.list_widget.currentRow()
+        if currently_selected is None or not currently_selected.isSelected():
+            return
+        self.lines.pop(current_row)
+        self.list_widget.takeItem(current_row)
+        self.redraw_graph()
+
+    def redraw_graph(self):
+        self.parent.ax.clear()
+        self.parent.generate_graph()
 
 
 app = qtw.QApplication([])
