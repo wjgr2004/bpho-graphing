@@ -329,11 +329,13 @@ class ModelWindow(qtw.QWidget):
     Gets the information to plot a model.
     """
 
-    def __init__(self, parent, draw_func, label_func, valid_input, colours, *options):
+    def __init__(self, parent, draw_func, label_func, valid_input, model_colours, *options):
         super().__init__()
 
         self.parent = parent
         self.valid_input = valid_input
+
+        self.setFixedWidth(230)
 
         # window widgets
         self.layout = qtw.QVBoxLayout()
@@ -362,7 +364,7 @@ class ModelWindow(qtw.QWidget):
         self.widget = qtw.QWidget()
         self.setLayout(self.layout)
 
-        self.colours = colours
+        self.colours = model_colours
 
         self.plot_func, self.label_func = draw_func, label_func
 
@@ -583,6 +585,8 @@ class TitleWindow(qtw.QWidget):
         super().__init__()
 
         self.parent = parent
+
+        self.setFixedSize(250, 170)
 
         # Window Widgets
         self.layout = qtw.QVBoxLayout()
