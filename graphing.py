@@ -132,6 +132,7 @@ class GraphWindow(qtw.QMainWindow):
         # Prevent multiple popups appearing
         if self.in_window:
             return
+
         self.filename, _ = qtw.QFileDialog.getOpenFileName(self, "Open File", ".", "Csv Files (*.csv)")
         try:
             with open(self.filename, "r") as file:
@@ -273,9 +274,9 @@ class GraphWindow(qtw.QMainWindow):
         colours = self.colours[self.cycle]
         self.cycle = (self.cycle + 1) % len(self.colours)
 
-        plot_window = ModelWindow(self, draw_func, label_func, valid_input, colours, *args)
+        self.plot_window = ModelWindow(self, draw_func, label_func, valid_input, colours, *args)
         self.in_window = True
-        plot_window.show()
+        self.plot_window.show()
 
     def generate_graph(self):
         """
@@ -322,9 +323,9 @@ class GraphWindow(qtw.QMainWindow):
         # Prevent multiple popups appearing
         if self.in_window:
             return
-        edit_window = LineEditWindow(self.lines, self)
+        self.edit_window = LineEditWindow(self.lines, self)
         self.in_window = True
-        edit_window.show()
+        self.edit_window.show()
 
 
 class ModelWindow(qtw.QWidget):
@@ -396,7 +397,7 @@ class ModelWindow(qtw.QWidget):
             # add line
             self.parent.lines.insert(0, [self.label_func(*options), self.plot_func, options, self.colours, "model"])
 
-            #redraw graph
+            # redraw graph
             self.parent.generate_graph()
             self.parent.in_window = False
             self.close()
