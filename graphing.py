@@ -1,11 +1,7 @@
 import statistics
-import time
-
 import matplotlib.pyplot as plt
 import matplotlib.ticker as tck
 import csv
-import math
-import numpy as np
 from PyQt6 import QtWidgets as qtw
 from functools import partial
 import transforming_functions as transform_func
@@ -13,51 +9,26 @@ import model_functions as model_func
 import plotting_functions as plot_func
 
 
-def mean(vals):
-    return np.mean(vals), np.std(vals, ddof=1)
-
-
-def multiply(vals, st_dev):
-    return vals[0] * vals[1], math.sqrt(pow(st_dev[0]/vals[0], 2) + pow(st_dev[1]/vals[1], 2))
-
-
-def divide(vals, st_dev):
-    return vals[0] / vals[1], math.sqrt(pow(st_dev[0] / vals[0], 2) + pow(st_dev[1] / vals[1], 2))
-
-
-def add(vals, st_dev):
-    return vals[0] + vals[1], math.sqrt(pow(st_dev[0] / vals[0], 2) + pow(st_dev[1] / vals[1], 2))
-
-
-def subtract(vals, st_dev):
-    return vals[0] + vals[1], math.sqrt(pow(st_dev[0] / vals[0], 2) + pow(st_dev[1] / vals[1], 2))
-
-
-operations_dict = {
-    "Mean": (mean, 0, False),
-    "Multiply": (multiply, 2, True),
-    "Divide": (divide, 2, True),
-    "Add": (add, 2, True),
-    "Subtract": (subtract, 2, True)
-}
-
-
 class GraphWindow(qtw.QMainWindow):
+    """
+    The main window to edit the graph
+    """
 
     def __init__(self):
+        super().__init__()
 
         self.filename = None
 
         self.min = None
         self.max = None
 
-        plt.style.use("seaborn-whitegrid")
+        self.in_window = False
 
         self.handles = []
         self.lines = []
 
-        self.plot_window = None
-
+        # Set up graph
+        plt.style.use("seaborn-whitegrid")
         self.fig, self.ax = plt.subplots(figsize=(14, 10), layout="constrained")
         plt.ion()
         plt.show()
@@ -73,11 +44,11 @@ class GraphWindow(qtw.QMainWindow):
                         ["cyan", "lightskyblue"]
                         ]
 
-        super().__init__()
-
+        # Window Settings
         self.setFixedSize(250, 600)
         self.setWindowTitle("Graph Generator")
 
+        # Window Widgets
         self.layout = qtw.QFormLayout()
 
         self.ingest_button = qtw.QPushButton("Open")
@@ -140,7 +111,7 @@ class GraphWindow(qtw.QMainWindow):
         self.layout.addWidget(self.generate_button)
 
         self.plot_drop_down = qtw.QComboBox()
-        self.plot_drop_down.addItems(model_func.plotting_dict.keys())
+        self.plot_drop_down.addItems(model_func.models_dict.keys())
         self.layout.addRow("Model Type: ", self.plot_drop_down)
 
         self.plot_button = qtw.QPushButton("Add Model")
@@ -152,9 +123,13 @@ class GraphWindow(qtw.QMainWindow):
         self.setCentralWidget(self.widget)
 
         self.generate_graph()
-        self.in_window = False
 
     def ingest(self):
+        """
+        Imports data from a csv file.
+        """
+
+        # Prevent multiple popups appearing
         if self.in_window:
             return
         self.filename, _ = qtw.QFileDialog.getOpenFileName(self, "Open File", ".", "Csv Files (*.csv)")
@@ -162,15 +137,21 @@ class GraphWindow(qtw.QMainWindow):
             with open(self.filename, "r") as file:
                 data_dict = csv.DictReader(file)
 
+                # Remove old headings
                 self.drop_x_vals.clear()
                 self.drop_y_vals.clear()
 
+                # Add new headings
                 self.drop_x_vals.addItems(data_dict.fieldnames)
                 self.drop_y_vals.addItems(data_dict.fieldnames)
         except (FileNotFoundError, TypeError):
             pass
 
     def add_plot(self):
+        """
+        Adds a plot to the graph.
+        """
+
         try:
             if self.filename is None:
                 qtw.QMessageBox.warning(
@@ -180,7 +161,7 @@ class GraphWindow(qtw.QMainWindow):
                 with open(self.filename, "r") as file:
                     data_dict = csv.DictReader(file)
 
-                    flag = False
+                    data_found = False
 
                     x = [[]]
                     x_list = []
@@ -188,32 +169,40 @@ class GraphWindow(qtw.QMainWindow):
                     y_list = []
                     x_name = self.drop_x_vals.currentText()
                     y_name = self.drop_y_vals.currentText()
+
                     for row in data_dict:
                         try:
                             x_val = transform_func.function_dict[
                                              self.drop_x_func.currentText()](float(row[x_name]))
                             x[-1].append(x_val)
                             x_list.append(x_val)
+
                             try:
                                 y_val = transform_func.function_dict[
                                     self.drop_y_func.currentText()](float(row[y_name]))
                                 y[-1].append(y_val)
                                 y_list.append(y_val)
-                                flag = True
-                            except (ValueError, ZeroDivisionError):
+                                data_found = True
+
+                            except (ValueError, ZeroDivisionError):  # If data is not numeric
+                                # remove added x values
                                 x[-1].pop()
                                 x_list.pop()
+
+                                # create new section
                                 if x[-1]:
                                     x.append([])
                                     y.append([])
-                        except (ValueError, ZeroDivisionError):
+                        except (ValueError, ZeroDivisionError):  # If data is not numeric
+                            # create new section
                             if x[-1]:
                                 x.append([])
                                 y.append([])
 
-                if flag:
+                if data_found:
 
                     if self.scale_button.isChecked():
+                        # code y data so mean is 0 and 1 is one standard deviation
                         y_bar = statistics.mean(y_list)
                         y_std_dev = statistics.stdev(y_list)
                         for section in y:
@@ -224,16 +213,20 @@ class GraphWindow(qtw.QMainWindow):
                                     section[i] = (section[i] - y_bar)
 
                     if self.line_label.text():
+                        # Use custom line label
                         name = self.line_label.text()
                     else:
                         name = f"{y_name} vs {x_name}"
 
                     colours = self.colours[self.cycle]
                     self.cycle = (self.cycle + 1) % len(self.colours)
+
+                    # add new line to lines
                     self.lines.insert(0, [
                         x, y, self.line_button.isChecked(), self.rank_button.isChecked(),
                         colours, name, plot_func.plotting_dict[self.drop_line_type.currentText()], "data"])
 
+                    # update range for models
                     if self.max is not None:
                         self.max = max(*x_list, self.max)
                         self.min = min(*x_list, self.min)
@@ -241,6 +234,7 @@ class GraphWindow(qtw.QMainWindow):
                         self.max = max(*x_list)
                         self.min = min(*x_list)
 
+                    # redraw graph
                     self.ax.clear()
                     self.generate_graph()
 
@@ -248,20 +242,17 @@ class GraphWindow(qtw.QMainWindow):
                     qtw.QMessageBox.warning(
                         self, "Type Failure", "The data you selected is not numerical.",
                         qtw.QMessageBox.StandardButton.Ok)
+
         except FileNotFoundError:
             qtw.QMessageBox.warning(
                 self, "No File", "You haven't selected a file or the file you selected has beem moved or deleted.",
                 qtw.QMessageBox.StandardButton.Ok)
-        except TypeError:
-            qtw.QMessageBox.warning(
-                self, "Type Failure", "The data you selected is not numerical.",
-                qtw.QMessageBox.StandardButton.Ok)
-        except ValueError:
-            qtw.QMessageBox.warning(
-                self, "Type Failure", "The data you selected is not numerical.",
-                qtw.QMessageBox.StandardButton.Ok)
 
     def clear_graph(self):
+        """
+        Removes all plots from the graph.
+        """
+
         self.cycle = 0
         self.lines = []
         self.ax.clear()
@@ -269,20 +260,33 @@ class GraphWindow(qtw.QMainWindow):
         self.min = None
 
     def add_model(self):
+        """
+        Adds a model from an equation to a graph.
+        Gets information by opening a window.
+        """
+
+        # Prevent multiple popups appearing
         if self.in_window:
             return
-        draw_func, label_func, valid_input, args = model_func.plotting_dict[self.plot_drop_down.currentText()]
+
+        draw_func, label_func, valid_input, args = model_func.models_dict[self.plot_drop_down.currentText()]
         colours = self.colours[self.cycle]
         self.cycle = (self.cycle + 1) % len(self.colours)
-        self.plot_window = PlotWindow(self, draw_func, label_func, valid_input, colours, *args)
+
+        plot_window = ModelWindow(self, draw_func, label_func, valid_input, colours, *args)
         self.in_window = True
-        self.plot_window.show()
+        plot_window.show()
 
     def generate_graph(self):
+        """
+        Draws the new plots on the graph and recalculates the models with the updated ranges.
+        """
+
         self.handles = []
 
         for line in reversed(self.lines):
-            if line[-1] == "data":
+            if line[-1] == "data":  # if line is from data
+                # plots data with function in plotting_functions
                 self.handles += line[-2](*line[:-2])
 
             elif self.max is not None:
@@ -292,8 +296,10 @@ class GraphWindow(qtw.QMainWindow):
                 line, = plt.plot(x, y, color=colours[0], label=label)
                 self.handles.append(line)
 
+        # add labels to key
         self.ax.legend(handles=self.handles)
 
+        # Redraws gridlines and ticks
         self.ax.xaxis.set_minor_locator(tck.AutoMinorLocator())
         self.ax.yaxis.set_minor_locator(tck.AutoMinorLocator())
         self.ax.tick_params(which="minor", length=3, width=0.7)
@@ -302,16 +308,18 @@ class GraphWindow(qtw.QMainWindow):
         plt.grid(linewidth=0.8, color="darkgrey")
         plt.grid(linewidth=0.4, color="gainsboro", which="minor")
 
+        # Updates titles and axis labels
         self.ax.set_title(self.title.text())
         self.ax.set_xlabel(self.x_label.text())
         self.ax.set_ylabel(self.y_label.text())
 
-    def closeEvent(self, event):
-        if self.plot_window is not None:
-            self.plot_window.done(2)
-        event.accept()
-
     def edit_lines(self):
+        """
+        Edit the order of the plots and delete plots.
+        Opens a window to allow the used to manage the plots.
+        """
+
+        # Prevent multiple popups appearing
         if self.in_window:
             return
         edit_window = LineEditWindow(self.lines, self)
@@ -319,7 +327,10 @@ class GraphWindow(qtw.QMainWindow):
         edit_window.show()
 
 
-class PlotWindow(qtw.QWidget):
+class ModelWindow(qtw.QWidget):
+    """
+    Gets the information to plot a model.
+    """
 
     def __init__(self, parent, draw_func, label_func, valid_input, colours, *options):
         super().__init__()
@@ -327,6 +338,7 @@ class PlotWindow(qtw.QWidget):
         self.parent = parent
         self.valid_input = valid_input
 
+        # window widgets
         self.layout = qtw.QVBoxLayout()
 
         self.form_layout = qtw.QFormLayout()
@@ -361,15 +373,18 @@ class PlotWindow(qtw.QWidget):
         self.parent.in_window = False
         self.close()
 
-    def closeEvent(self, event):
-        self.parent.in_window = False
-        event.accept()
+    def closeEvent(self, _):
+        self.cancel()
 
     def submit(self):
+        """
+        Adds the new model to the graph.
+        """
+
         options = []
         for input_box in self.input_boxes:
             val = model_func.convert_to_number(input_box.text())
-            if val is not False:
+            if val is not False:  # check if data is numeric
                 options.append(val)
             else:
                 qtw.QMessageBox.warning(
@@ -378,7 +393,10 @@ class PlotWindow(qtw.QWidget):
                 return
 
         if self.valid_input(*options):
+            # add line
             self.parent.lines.insert(0, [self.label_func(*options), self.plot_func, options, self.colours, "model"])
+
+            #redraw graph
             self.parent.generate_graph()
             self.parent.in_window = False
             self.close()
@@ -389,6 +407,9 @@ class PlotWindow(qtw.QWidget):
 
 
 class LineEditWindow(qtw.QWidget):
+    """
+    Allows the user to reorder and delete plots.
+    """
 
     def __init__(self, lines, parent):
         super().__init__()
@@ -401,6 +422,7 @@ class LineEditWindow(qtw.QWidget):
         self.lines = lines
         self.parent = parent
 
+        # window widgets
         self.line_layouts = []
 
         self.list_widget = qtw.QListWidget()
@@ -437,6 +459,12 @@ class LineEditWindow(qtw.QWidget):
         self.options_layout.addWidget(self.close_button)
 
     def move_line(self, up):
+        """
+        Reorders how the plots appear on the graph.
+        :param up: If the line should be moved up or down.
+        """
+
+        # select up or down
         current_row = self.list_widget.currentRow()
         if up:
             new_row = current_row - 1
@@ -444,20 +472,32 @@ class LineEditWindow(qtw.QWidget):
             new_row = current_row + 1
         if new_row < 0 or new_row >= len(self.lines):
             return
+
+        # swap items in self.lines
         self.lines[current_row], self.lines[new_row] = self.lines[new_row], self.lines[current_row]
+
+        # deletes item then reinserts it in new location
         item = self.list_widget.item(current_row)
         self.list_widget.takeItem(current_row)
         self.list_widget.insertItem(new_row, item)
         self.list_widget.setCurrentRow(new_row)
+
         self.redraw_graph()
 
     def delete_line(self):
+        """
+        Remove a plot from the graph.
+        """
+
         currently_selected = self.list_widget.currentItem()
         current_row = self.list_widget.currentRow()
-        if currently_selected is None or not currently_selected.isSelected():
+
+        if currently_selected is None or not currently_selected.isSelected():  # checks an item is selected
             return
+
         self.lines.pop(current_row)
         self.list_widget.takeItem(current_row)
+
         self.redraw_graph()
 
     def redraw_graph(self):
@@ -468,12 +508,13 @@ class LineEditWindow(qtw.QWidget):
         self.parent.in_window = False
         self.close()
 
-    def closeEvent(self, event):
-        self.parent.in_window = False
-        event.accept()
+    def closeEvent(self, _):
+        self.custom_close()
 
 
-app = qtw.QApplication([])
-window = GraphWindow()
-window.show()
-app.exec()
+if __name__ == "__main__":
+    # shows the graphing options and graph
+    app = qtw.QApplication([])
+    window = GraphWindow()
+    window.show()
+    app.exec()

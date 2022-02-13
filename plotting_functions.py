@@ -4,6 +4,27 @@ import matplotlib.pyplot as plt
 from functools import reduce
 
 
+"""
+This is the file for writing new types of graph.
+
+The functions need to accept the arguments:
+   x_data, y_data, show_best_fit, show_rank, colours, label
+   
+The functions should plot the data using plt.plot.
+
+The functions must label the graphs with the supplied label.
+
+The functions must show pearson's rand if it is selected.
+
+The functions must use the supplied colours but can use a gradient between them if appropriate.
+
+The functions must return the labels in a list so they can be added to the key.
+
+After writing a function that fits these requirements add it to plotting_dict in the form:
+   name: function
+"""
+
+
 def scatter_plot(x, y, show_best_fit, rank, colours, label):
     x = reduce(lambda a, b: a + b, x)
     y = reduce(lambda a, b: a + b, y)

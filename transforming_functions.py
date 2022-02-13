@@ -1,6 +1,14 @@
 import math
 
 
+"""
+This is the file for the transformations you can apply to the data.
+
+To add a function write the function then add it to function_dict in the format:
+   "equation": function
+"""
+
+
 def linear(val):
     return val
 
