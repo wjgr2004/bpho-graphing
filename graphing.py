@@ -45,33 +45,39 @@ class GraphWindow(qtw.QMainWindow):
                         ]
 
         # Window Settings
-        self.setFixedSize(250, 600)
+        self.setFixedSize(230, 430)
         self.setWindowTitle("Graph Generator")
 
         # Window Widgets
-        self.layout = qtw.QFormLayout()
+        self.layout = qtw.QVBoxLayout()
 
         self.ingest_button = qtw.QPushButton("Open")
         self.ingest_button.clicked.connect(self.ingest)
         self.layout.addWidget(self.ingest_button)
 
+        self.form_layout = qtw.QFormLayout()
+        self.layout.addLayout(self.form_layout)
+
         self.drop_y_func = qtw.QComboBox()
         self.drop_y_func.addItems(transform_func.function_dict.keys())
-        self.layout.addRow("y-func", self.drop_y_func)
+        self.form_layout.addRow("y-func", self.drop_y_func)
 
         self.drop_y_vals = qtw.QComboBox()
-        self.layout.addRow("y-val", self.drop_y_vals)
+        self.form_layout.addRow("y-val", self.drop_y_vals)
 
         self.drop_x_func = qtw.QComboBox()
         self.drop_x_func.addItems(transform_func.function_dict.keys())
-        self.layout.addRow("x-func", self.drop_x_func)
+        self.form_layout.addRow("x-func", self.drop_x_func)
 
         self.drop_x_vals = qtw.QComboBox()
-        self.layout.addRow("x-val", self.drop_x_vals)
+        self.form_layout.addRow("x-val", self.drop_x_vals)
+
+        self.line_label = qtw.QLineEdit()
+        self.form_layout.addRow("Label", self.line_label)
 
         self.drop_line_type = qtw.QComboBox()
         self.drop_line_type.addItems(plot_func.plotting_dict.keys())
-        self.layout.addRow("Plot type: ", self.drop_line_type)
+        self.form_layout.addRow("Plot type: ", self.drop_line_type)
 
         self.line_button = qtw.QCheckBox("Line of Best Fit")
         self.layout.addWidget(self.line_button)
@@ -82,41 +88,35 @@ class GraphWindow(qtw.QMainWindow):
         self.scale_button = qtw.QCheckBox("Scale y-axis")
         self.layout.addWidget(self.scale_button)
 
-        self.line_label = qtw.QLineEdit()
-        self.layout.addRow("Label", self.line_label)
+        self.options_layout = qtw.QGridLayout()
+        self.layout.addLayout(self.options_layout)
 
         self.add_button = qtw.QPushButton("Add Plot")
         self.add_button.clicked.connect(self.add_plot)
-        self.layout.addWidget(self.add_button)
-
-        self.edit_button = qtw.QPushButton("Edit Lines")
-        self.edit_button.clicked.connect(self.edit_lines)
-        self.layout.addWidget(self.edit_button)
+        self.options_layout.addWidget(self.add_button, 0, 0)
 
         self.clear_button = qtw.QPushButton("Clear")
         self.clear_button.clicked.connect(self.clear_graph)
-        self.layout.addWidget(self.clear_button)
+        self.options_layout.addWidget(self.clear_button, 0, 1)
 
-        self.title = qtw.QLineEdit()
-        self.layout.addRow("Title", self.title)
+        self.edit_button = qtw.QPushButton("Edit Lines")
+        self.edit_button.clicked.connect(self.edit_lines)
+        self.options_layout.addWidget(self.edit_button, 1, 0)
 
-        self.x_label = qtw.QLineEdit()
-        self.layout.addRow("x-label", self.x_label)
+        self.edit_title_button = qtw.QPushButton("Edit Title")
+        self.edit_title_button.clicked.connect(self.edit_titles)
+        self.options_layout.addWidget(self.edit_title_button, 1, 1)
 
-        self.y_label = qtw.QLineEdit()
-        self.layout.addRow("y-label", self.y_label)
+        self.model_layout = qtw.QHBoxLayout()
+        self.layout.addLayout(self.model_layout)
 
-        self.generate_button = qtw.QPushButton("Update Titles")
-        self.generate_button.clicked.connect(self.generate_graph)
-        self.layout.addWidget(self.generate_button)
+        self.model_drop_down = qtw.QComboBox()
+        self.model_drop_down.addItems(model_func.models_dict.keys())
+        self.model_layout.addWidget(self.model_drop_down)
 
-        self.plot_drop_down = qtw.QComboBox()
-        self.plot_drop_down.addItems(model_func.models_dict.keys())
-        self.layout.addRow("Model Type: ", self.plot_drop_down)
-
-        self.plot_button = qtw.QPushButton("Add Model")
-        self.plot_button.clicked.connect(self.add_model)
-        self.layout.addWidget(self.plot_button)
+        self.model_button = qtw.QPushButton("Add Model")
+        self.model_button.clicked.connect(self.add_model)
+        self.model_layout.addWidget(self.model_button)
 
         self.widget = qtw.QWidget()
         self.widget.setLayout(self.layout)
@@ -270,7 +270,7 @@ class GraphWindow(qtw.QMainWindow):
         if self.in_window:
             return
 
-        draw_func, label_func, valid_input, args = model_func.models_dict[self.plot_drop_down.currentText()]
+        draw_func, label_func, valid_input, args = model_func.models_dict[self.model_drop_down.currentText()]
         colours = self.colours[self.cycle]
         self.cycle = (self.cycle + 1) % len(self.colours)
 
@@ -309,11 +309,6 @@ class GraphWindow(qtw.QMainWindow):
         plt.grid(linewidth=0.8, color="darkgrey")
         plt.grid(linewidth=0.4, color="gainsboro", which="minor")
 
-        # Updates titles and axis labels
-        self.ax.set_title(self.title.text())
-        self.ax.set_xlabel(self.x_label.text())
-        self.ax.set_ylabel(self.y_label.text())
-
     def edit_lines(self):
         """
         Edit the order of the plots and delete plots.
@@ -326,6 +321,14 @@ class GraphWindow(qtw.QMainWindow):
         self.edit_window = LineEditWindow(self.lines, self)
         self.in_window = True
         self.edit_window.show()
+
+    def edit_titles(self):
+        # Prevent multiple popups appearing
+        if self.in_window:
+            return
+        self.title_window = TitleWindow(self)
+        self.in_window = True
+        self.title_window.show()
 
 
 class ModelWindow(qtw.QWidget):
@@ -511,6 +514,56 @@ class LineEditWindow(qtw.QWidget):
 
     def closeEvent(self, _):
         self.custom_close()
+
+
+class TitleWindow(qtw.QWidget):
+    """
+    Window for editing the title of the graph.
+    """
+
+    def __init__(self, parent):
+        super().__init__()
+
+        self.parent = parent
+
+        # Window Widgets
+        self.layout = qtw.QVBoxLayout()
+        self.setLayout(self.layout)
+
+        self.form_layout = qtw.QFormLayout()
+        self.layout.addLayout(self.form_layout)
+
+        self.title = qtw.QLineEdit()
+        self.form_layout.addRow("Title", self.title)
+
+        self.y_label = qtw.QLineEdit()
+        self.form_layout.addRow("y-label", self.y_label)
+
+        self.x_label = qtw.QLineEdit()
+        self.form_layout.addRow("x-label", self.x_label)
+
+        self.options_layout = qtw.QHBoxLayout()
+        self.layout.addLayout(self.options_layout)
+
+        self.cancel_button = qtw.QPushButton("Cancel")
+        self.cancel_button.clicked.connect(self.custom_close)
+        self.options_layout.addWidget(self.cancel_button)
+
+        self.update_button = qtw.QPushButton("Update Titles")
+        self.update_button.clicked.connect(self.update_titles)
+        self.options_layout.addWidget(self.update_button)
+
+    def custom_close(self):
+        self.parent.in_window = False
+        self.close()
+
+    def closeEvent(self, _):
+        self.close()
+
+    def update_titles(self):
+        self.parent.ax.set_title(self.title.text())
+        self.parent.ax.set_xlabel(self.x_label.text())
+        self.parent.ax.set_ylabel(self.y_label.text())
 
 
 if __name__ == "__main__":
