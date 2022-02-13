@@ -3,7 +3,6 @@ import numpy as np
 import scipy.stats
 import matplotlib.pyplot as plt
 from functools import reduce
-import math
 
 
 """
@@ -42,7 +41,7 @@ def scatter_plot(x, y, show_best_fit, rank, colours, label):
         rank_text = ""
 
     if len(x) > 300:
-        line, = plt.plot(x, y, "x", color=colours[0], label=label + rank_text, alpha=.1)
+        line, = plt.plot(x, y, "x", color=colours[0], label=label + rank_text, alpha=.15)
     elif len(x2) > 50:
         line, = plt.plot(x, y, "x", color=colours[0], label=label + rank_text, alpha=.7)
     else:
