@@ -113,7 +113,7 @@ def line_plot(x, y, show_best_fit, rank, colours, label):
 def smoothed_plot(x, y, show_best_fit, show_rank, colours, label):
     x2 = np.array(reduce(lambda a, b: a + b, x))
 
-    x3 = np.linspace(min(x2), max(x2), round((len(x2) ** (3/4)) / 1.4))
+    x3 = np.linspace(min(x2), max(x2), round((len(x2) ** (2/3)) / 1.6))
 
     x4 = [[]]
     y4 = [[]]
