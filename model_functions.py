@@ -16,7 +16,7 @@ You then need do add the functions to models_dict in the following format:
 
 def convert_to_number(n):
     if not n:
-        return 0
+        return 0.0
     try:
         return float(n)
     except ValueError:

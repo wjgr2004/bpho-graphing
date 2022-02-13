@@ -7,6 +7,7 @@ from functools import partial
 import transforming_functions as transform_func
 import model_functions as model_func
 import plotting_functions as plot_func
+import graphing_colours as colours
 
 
 class GraphWindow(qtw.QMainWindow):
@@ -34,15 +35,7 @@ class GraphWindow(qtw.QMainWindow):
         plt.show()
 
         self.cycle = 0
-        self.colours = [["mediumblue", "#084eff"],
-                        ["orangered", "coral"],
-                        ["maroon", "firebrick"],
-                        ["#bd08ff", "orchid"],
-                        ["green", "mediumseagreen"],
-                        ["k", "grey"],
-                        ["goldenrod", "gold"],
-                        ["cyan", "lightskyblue"]
-                        ]
+        self.colours = colours.colours
 
         # Window Settings
         self.setFixedSize(230, 430)
@@ -418,7 +411,7 @@ class LineEditWindow(qtw.QWidget):
     def __init__(self, lines, parent):
         super().__init__()
 
-        self.setFixedWidth(400)
+        self.setFixedSize(430, 300)
 
         self.layout = qtw.QVBoxLayout()
         self.setLayout(self.layout)
@@ -443,24 +436,89 @@ class LineEditWindow(qtw.QWidget):
 
         self.layout.addWidget(self.list_widget)
 
-        self.options_layout = qtw.QHBoxLayout()
+        self.options_layout = qtw.QGridLayout()
         self.layout.addLayout(self.options_layout)
-
-        self.delete_button = qtw.QPushButton("Delete")
-        self.delete_button.clicked.connect(self.delete_line)
-        self.options_layout.addWidget(self.delete_button)
 
         self.move_up_button = qtw.QPushButton("Move Up")
         self.move_up_button.clicked.connect(partial(self.move_line, True))
-        self.options_layout.addWidget(self.move_up_button)
+        self.options_layout.addWidget(self.move_up_button, 0, 0)
 
         self.move_down_button = qtw.QPushButton("Move Down")
         self.move_down_button.clicked.connect(partial(self.move_line, False))
-        self.options_layout.addWidget(self.move_down_button)
+        self.options_layout.addWidget(self.move_down_button, 0, 1)
+
+        self.delete_button = qtw.QPushButton("Delete")
+        self.delete_button.clicked.connect(self.delete_line)
+        self.options_layout.addWidget(self.delete_button, 0, 2)
+
+        self.edit_colour_button = qtw.QPushButton("Edit Main Colour")
+        self.edit_colour_button.clicked.connect(partial(self.edit_colour, True))
+        self.options_layout.addWidget(self.edit_colour_button, 1, 0)
+
+        self.edit_secondary_colour_button = qtw.QPushButton("Edit Second Colour")
+        self.edit_secondary_colour_button.clicked.connect(partial(self.edit_colour, False))
+        self.options_layout.addWidget(self.edit_secondary_colour_button, 1, 1)
+
+        self.edit_label_button = qtw.QPushButton("Edit Label")
+        self.edit_label_button.clicked.connect(self.edit_label)
+        self.options_layout.addWidget(self.edit_label_button, 1, 2)
 
         self.close_button = qtw.QPushButton("Close")
         self.close_button.clicked.connect(self.custom_close)
-        self.options_layout.addWidget(self.close_button)
+        self.options_layout.addWidget(self.close_button, 2, 0, 1, 3)
+
+    def edit_colour(self, main_colour):
+        """
+        Edits the line colour
+        :param main_colour: Whether to edit the main colour or secondary colour.
+        """
+
+        currently_selected = self.list_widget.currentItem()
+        current_row = self.list_widget.currentRow()
+
+        if currently_selected is None or not currently_selected.isSelected():  # checks an item is selected
+            return
+
+        # Opens a colour picker
+        self.colour = qtw.QColorDialog.getColor()
+        if self.colour.isValid():
+            r, g, b, _ = self.colour.getRgb()
+            # Converts the colour to hex code
+            colour = f"#{r:02x}{g:02x}{b:02x}"
+            line = self.lines[current_row]
+            if line[-1] == "data":
+                index = 4
+            else:
+                index = 3
+
+            if main_colour:
+                line[index] = [colour, line[index][1]]
+            else:
+                line[index] = [line[index][0], colour]
+
+            self.redraw_graph()
+
+    def edit_label(self):
+
+        currently_selected = self.list_widget.currentItem()
+        current_row = self.list_widget.currentRow()
+
+        if currently_selected is None or not currently_selected.isSelected():  # checks an item is selected
+            return
+
+        text, ok = qtw.QInputDialog.getText(self, "Change Label", "New Label:")
+
+        if ok:
+            line = self.lines[current_row]
+            if line[-1] == "data":
+                line[5] = text
+            else:
+                line[0] = text
+
+        self.redraw_graph()
+
+        self.list_widget.takeItem(current_row)
+        self.list_widget.insertItem(current_row, text)
 
     def move_line(self, up):
         """
@@ -566,9 +624,12 @@ class TitleWindow(qtw.QWidget):
         self.parent.ax.set_ylabel(self.y_label.text())
 
 
-if __name__ == "__main__":
-    # shows the graphing options and graph
+def main():
     app = qtw.QApplication([])
     window = GraphWindow()
     window.show()
     app.exec()
+
+
+if __name__ == "__main__":
+    main()
