@@ -1,7 +1,9 @@
+import statistics
 import numpy as np
 import scipy.stats
 import matplotlib.pyplot as plt
 from functools import reduce
+import math
 
 
 """
@@ -108,7 +110,43 @@ def line_plot(x, y, show_best_fit, rank, colours, label):
     return handles
 
 
+def smoothed_plot(x, y, show_best_fit, show_rank, colours, label):
+    x2 = np.array(reduce(lambda a, b: a + b, x))
+
+    x3 = np.linspace(min(x2), max(x2), round(len(x2) ** (7/8)))
+
+    x4 = [[]]
+    y4 = [[]]
+    current_sec, current = 0, 0
+    for i in range(len(x3) - 1):
+        values = []
+        if current_sec >= len(x):
+            break
+        while x[current_sec][current] <= x3[i+1]:
+            values.append(y[current_sec][current])
+            current += 1
+            if current >= len(x[current_sec]):
+                current = 0
+                current_sec += 1
+                if x4[-1]:
+                    x4.append([])
+                    y4.append([])
+                break
+        if values:
+            x4[-1].append(statistics.mean((x3[i], x3[i+1])))
+            y4[-1].append(statistics.mean(values))
+
+    if not x4[-1]:
+        x4.pop()
+        y4.pop()
+
+    handles = line_plot(x4, y4, show_best_fit, show_rank, colours, label)
+
+    return handles
+
+
 plotting_dict = {
     "Scatter": scatter_plot,
-    "Line": line_plot
+    "Line": line_plot,
+    "Smoothed Line": smoothed_plot
 }
