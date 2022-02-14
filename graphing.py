@@ -66,7 +66,7 @@ class GraphWindow(qtw.QMainWindow):
         plt.style.use("seaborn-whitegrid")
         if polar:
             self.fig, self.ax = plt.subplots(figsize=(11, 11), layout="constrained", subplot_kw={"projection": "polar"})
-            plt.gca().set_aspect('equal', adjustable='box')
+            # plt.gca().set_aspect('equal', adjustable='box')
         else:
             self.fig, self.ax = plt.subplots(figsize=(14, 10), layout="constrained")
         plt.ion()

@@ -19,7 +19,7 @@ def any_numbers(*_):
 
 
 def linear(m, c, min_val, max_val):
-    x = np.linspace(min_val, max_val, 1000)
+    x = np.linspace(min_val, max_val, 2000)
     y = m * x + c
     return x, y
 
@@ -29,7 +29,7 @@ def linear_label(m, c):
 
 
 def extended_exponential(a, r, c, min_val, max_val):
-    x = np.linspace(min_val, max_val, 1000)
+    x = np.linspace(min_val, max_val, 2000)
     y = a * (r ** x) + c
     return x, y
 

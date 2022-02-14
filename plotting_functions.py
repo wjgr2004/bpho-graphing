@@ -67,7 +67,10 @@ def scatter_plot(x, y, show_best_fit, rank, colours, label, polar):
         # noinspection PyTupleAssignmentBalance
         m, c = np.polyfit(x2, y2, 1)
 
-        points = np.array([min_val, max_val])
+        if polar:
+            points = np.linspace(min_val, max_val, 2000)
+        else:
+            points = np.array([min_val, max_val])
         best_fit, = plt.plot(points, m * points + c, label=f"y = {m:.5}x + {c:.5}", color=colours[1])
         handles.append(best_fit)
 
@@ -107,8 +110,11 @@ def line_plot(x, y, show_best_fit, rank, colours, label, polar):
         # noinspection PyTupleAssignmentBalance
         m, c = np.polyfit(x2, y2, 1)
 
-        points = np.array([min_val, max_val])
-        best_fit, = plt.plot(points, m * points + c, label=f"y = {m:.5}x + {c:.5}", color=colours[1])
+        if polar:
+            points = np.linspace(min_val, max_val, 2000)
+        else:
+            points = np.array([min_val, max_val])
+        best_fit, = plt.plot(list(map(math.radians, points)), m * points + c, label=f"y = {m:.5}x + {c:.5}", color=colours[1])
         handles.append(best_fit)
     return handles
 
