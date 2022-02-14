@@ -10,6 +10,15 @@ import plotting_functions as plot_func
 import graphing_colours as colours
 
 
+def convert_to_number(n):
+    if not n:
+        return 0.0
+    try:
+        return float(n)
+    except ValueError:
+        return False
+
+
 class GraphWindow(qtw.QMainWindow):
     """
     The main window to edit the graph
@@ -38,7 +47,7 @@ class GraphWindow(qtw.QMainWindow):
         self.colours = colours.colours
 
         # Window Settings
-        self.setFixedSize(230, 430)
+        self.setFixedSize(230, 450)
         self.setWindowTitle("Graph Generator")
 
         # Window Widgets
@@ -110,6 +119,10 @@ class GraphWindow(qtw.QMainWindow):
         self.model_button = qtw.QPushButton("Add Model")
         self.model_button.clicked.connect(self.add_model)
         self.model_layout.addWidget(self.model_button)
+
+        self.range_button = qtw.QPushButton("Edit Range")
+        self.range_button.clicked.connect(self.edit_range)
+        self.layout.addWidget(self.range_button)
 
         self.widget = qtw.QWidget()
         self.widget.setLayout(self.layout)
@@ -323,6 +336,14 @@ class GraphWindow(qtw.QMainWindow):
         self.in_window = True
         self.title_window.show()
 
+    def edit_range(self):
+        # Prevent multiple popups appearing
+        if self.in_window:
+            return
+        self.range_window = RangeWindow(self)
+        self.in_window = True
+        self.range_window.show()
+
 
 class ModelWindow(qtw.QWidget):
     """
@@ -397,8 +418,7 @@ class ModelWindow(qtw.QWidget):
 
             # redraw graph
             self.parent.generate_graph()
-            self.parent.in_window = False
-            self.close()
+            self.cancel()
         else:
             qtw.QMessageBox.warning(
                 self, "Input Failure", "You input invalid numbers.",
@@ -626,6 +646,62 @@ class TitleWindow(qtw.QWidget):
         self.parent.ax.set_title(self.title.text())
         self.parent.ax.set_xlabel(self.x_label.text())
         self.parent.ax.set_ylabel(self.y_label.text())
+
+
+class RangeWindow(qtw.QWidget):
+
+    def __init__(self, parent):
+        super().__init__()
+
+        self.parent = parent
+
+        self.setFixedSize(250, 130)
+
+        # Window Widgets
+        self.layout = qtw.QVBoxLayout()
+
+        self.form_layout = qtw.QFormLayout()
+        self.layout.addLayout(self.form_layout)
+
+        self.minimum_text = qtw.QLineEdit()
+        self.form_layout.addRow("Minimum: ", self.minimum_text)
+
+        self.maximum_text = qtw.QLineEdit()
+        self.form_layout.addRow("Maximum: ", self.maximum_text)
+
+        self.options_layout = qtw.QHBoxLayout()
+        self.layout.addLayout(self.options_layout)
+
+        self.cancel_button = qtw.QPushButton("Cancel")
+        self.cancel_button.clicked.connect(self.custom_close)
+        self.options_layout.addWidget(self.cancel_button)
+
+        self.submit_button = qtw.QPushButton("Submit")
+        self.submit_button.clicked.connect(self.submit)
+        self.options_layout.addWidget(self.submit_button)
+
+        self.setLayout(self.layout)
+
+    def custom_close(self):
+        self.parent.in_window = False
+        self.close()
+
+    def closeEvent(self, _):
+        self.custom_close()
+
+    def submit(self):
+        val1, val2 = convert_to_number(self.minimum_text.text()), convert_to_number(self.maximum_text.text())
+        if val1 is not False and val2 is not False:
+            self.parent.min = val1
+            self.parent.max = val2
+
+            self.parent.ax.clear()
+            self.parent.generate_graph()
+            self.custom_close()
+        else:
+            qtw.QMessageBox.warning(
+                self, "Input Failure", "You didn't input valid numbers.",
+                qtw.QMessageBox.StandardButton.Ok)
 
 
 def main():
