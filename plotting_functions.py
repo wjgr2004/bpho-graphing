@@ -1,3 +1,4 @@
+import math
 import statistics
 import numpy as np
 import scipy.stats
@@ -26,8 +27,10 @@ After writing a function that fits these requirements add it to plotting_dict in
 """
 
 
-def scatter_plot(x, y, show_best_fit, rank, colours, label):
+def scatter_plot(x, y, show_best_fit, rank, colours, label, polar):
     x = reduce(lambda a, b: a + b, x)
+    if polar:
+        x = list(map(math.radians, x))
     y = reduce(lambda a, b: a + b, y)
     x2 = np.array(x)
     y2 = np.array(y)
@@ -71,7 +74,7 @@ def scatter_plot(x, y, show_best_fit, rank, colours, label):
     return handles
 
 
-def line_plot(x, y, show_best_fit, rank, colours, label):
+def line_plot(x, y, show_best_fit, rank, colours, label, polar):
     handles = []
     x2 = np.array(reduce(lambda a, b: a + b, x))
     y2 = np.array(reduce(lambda a, b: a + b, y))
@@ -83,6 +86,8 @@ def line_plot(x, y, show_best_fit, rank, colours, label):
         rank_text = ""
 
     for x_sec, y_sec in zip(x, y):
+        if polar:
+            x_sec = list(map(math.radians, x_sec))
         line, = plt.plot(x_sec, y_sec, color=colours[0], label=label + rank_text)
     handles.append(line)
 
@@ -105,41 +110,39 @@ def line_plot(x, y, show_best_fit, rank, colours, label):
         points = np.array([min_val, max_val])
         best_fit, = plt.plot(points, m * points + c, label=f"y = {m:.5}x + {c:.5}", color=colours[1])
         handles.append(best_fit)
-
     return handles
 
 
-def smoothed_plot(x, y, show_best_fit, show_rank, colours, label):
+def smoothed_plot(x, y, show_best_fit, show_rank, colours, label, polar):
     x2 = np.array(reduce(lambda a, b: a + b, x))
+    y2 = np.array(reduce(lambda a, b: a + b, y))
+    vals = list(zip(x2, y2))
+    vals.sort(key=lambda a: a[0])
 
     x3 = np.linspace(min(x2), max(x2), round((len(x2) ** (2/3)) / 1.6))
 
     x4 = [[]]
     y4 = [[]]
-    current_sec, current = 0, 0
-    for i in range(len(x3) - 1):
-        values = []
-        if current_sec >= len(x):
-            break
-        while x[current_sec][current] <= x3[i+1]:
-            values.append(y[current_sec][current])
+    current = 1
+    y_values = []
+    for x_val, y_val in vals:
+        if x_val <= x3[current]:
+            y_values.append(y_val)
+        else:
+            if y_values:
+                x4[-1].append(statistics.mean((x3[current - 1], x3[current])))
+                y4[-1].append(statistics.mean(y_values))
+            elif x4[-1]:
+                x4.append([])
+                y4.append([])
             current += 1
-            if current >= len(x[current_sec]):
-                current = 0
-                current_sec += 1
-                if x4[-1]:
-                    x4.append([])
-                    y4.append([])
-                break
-        if values:
-            x4[-1].append(statistics.mean((x3[i], x3[i+1])))
-            y4[-1].append(statistics.mean(values))
+            y_values = []
 
     if not x4[-1]:
         x4.pop()
         y4.pop()
 
-    handles = line_plot(x4, y4, show_best_fit, show_rank, colours, label)
+    handles = line_plot(x4, y4, show_best_fit, show_rank, colours, label, polar)
 
     return handles
 

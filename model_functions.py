@@ -14,21 +14,12 @@ You then need do add the functions to models_dict in the following format:
 """
 
 
-def convert_to_number(n):
-    if not n:
-        return 0.0
-    try:
-        return float(n)
-    except ValueError:
-        return False
-
-
 def any_numbers(*_):
     return True
 
 
 def linear(m, c, min_val, max_val):
-    x = np.array([min_val, max_val])
+    x = np.linspace(min_val, max_val, 1000)
     y = m * x + c
     return x, y
 

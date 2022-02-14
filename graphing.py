@@ -8,15 +8,38 @@ import transforming_functions as transform_func
 import model_functions as model_func
 import plotting_functions as plot_func
 import graphing_colours as colours
+from graphing_functions import convert_to_number
 
 
-def convert_to_number(n):
-    if not n:
-        return 0.0
-    try:
-        return float(n)
-    except ValueError:
-        return False
+class GraphOptionsWindow(qtw.QMainWindow):
+
+    def __init__(self):
+        super().__init__()
+
+        self.to_run = None
+
+        # Window Widgets
+        self.layout = qtw.QVBoxLayout()
+
+        self.cartesian_button = qtw.QPushButton("Normal Graphing")
+        self.cartesian_button.clicked.connect(self.run_cartesian)
+        self.layout.addWidget(self.cartesian_button)
+
+        self.polar_button = qtw.QPushButton("Polar Graphing")
+        self.polar_button.clicked.connect(self.run_polar)
+        self.layout.addWidget(self.polar_button)
+
+        self.central_widget = qtw.QWidget()
+        self.central_widget.setLayout(self.layout)
+        self.setCentralWidget(self.central_widget)
+
+    def run_cartesian(self):
+        self.to_run = "Cartesian"
+        self.close()
+
+    def run_polar(self):
+        self.to_run = "Polar"
+        self.close()
 
 
 class GraphWindow(qtw.QMainWindow):
@@ -24,8 +47,10 @@ class GraphWindow(qtw.QMainWindow):
     The main window to edit the graph
     """
 
-    def __init__(self):
+    def __init__(self, polar=False):
         super().__init__()
+
+        self.polar = polar
 
         self.filename = None
 
@@ -39,7 +64,11 @@ class GraphWindow(qtw.QMainWindow):
 
         # Set up graph
         plt.style.use("seaborn-whitegrid")
-        self.fig, self.ax = plt.subplots(figsize=(14, 10), layout="constrained")
+        if polar:
+            self.fig, self.ax = plt.subplots(figsize=(11, 11), layout="constrained", subplot_kw={"projection": "polar"})
+            plt.gca().set_aspect('equal', adjustable='box')
+        else:
+            self.fig, self.ax = plt.subplots(figsize=(14, 10), layout="constrained")
         plt.ion()
         plt.show()
 
@@ -60,19 +89,30 @@ class GraphWindow(qtw.QMainWindow):
         self.form_layout = qtw.QFormLayout()
         self.layout.addLayout(self.form_layout)
 
+        if polar:
+            name_1 = "Magnitude func"
+            name_2 = "Magnitude"
+            name_3 = "Angle func"
+            name_4 = "Angle"
+        else:
+            name_1 = "y-func"
+            name_2 = "y-val"
+            name_3 = "x-func"
+            name_4 = "x-val"
+
         self.drop_y_func = qtw.QComboBox()
         self.drop_y_func.addItems(transform_func.function_dict.keys())
-        self.form_layout.addRow("y-func", self.drop_y_func)
+        self.form_layout.addRow(name_1, self.drop_y_func)
 
         self.drop_y_vals = qtw.QComboBox()
-        self.form_layout.addRow("y-val", self.drop_y_vals)
+        self.form_layout.addRow(name_2, self.drop_y_vals)
 
         self.drop_x_func = qtw.QComboBox()
         self.drop_x_func.addItems(transform_func.function_dict.keys())
-        self.form_layout.addRow("x-func", self.drop_x_func)
+        self.form_layout.addRow(name_3, self.drop_x_func)
 
         self.drop_x_vals = qtw.QComboBox()
-        self.form_layout.addRow("x-val", self.drop_x_vals)
+        self.form_layout.addRow(name_4, self.drop_x_vals)
 
         self.line_label = qtw.QLineEdit()
         self.form_layout.addRow("Label", self.line_label)
@@ -231,7 +271,7 @@ class GraphWindow(qtw.QMainWindow):
                     # add new line to lines
                     self.lines.insert(0, [
                         x, y, self.line_button.isChecked(), self.rank_button.isChecked(),
-                        colours, name, plot_func.plotting_dict[self.drop_line_type.currentText()], "data"])
+                        colours, name, self.polar, plot_func.plotting_dict[self.drop_line_type.currentText()], "data"])
 
                     # update range for models
                     if self.max is not None:
@@ -265,6 +305,16 @@ class GraphWindow(qtw.QMainWindow):
         self.ax.clear()
         self.max = None
         self.min = None
+
+        if self.polar:
+            plt.thetagrids(range(0, 360, 15))
+            self.ax.set_theta_zero_location("N")
+            self.ax.xaxis.set_minor_locator(tck.AutoMinorLocator(3))
+            self.ax.yaxis.set_minor_locator(tck.AutoMinorLocator())
+            self.ax.tick_params(which="minor", length=3, width=0.7)
+            self.ax.tick_params(which="major", length=5, width=1.3)
+            plt.grid(linewidth=0.8, color="darkgrey")
+            plt.grid(linewidth=0.4, color="gainsboro", which="minor")
 
     def add_model(self):
         """
@@ -300,20 +350,29 @@ class GraphWindow(qtw.QMainWindow):
                 label, draw_func, options, colours, _ = line
                 x, y = draw_func(*options, self.min, self.max)
 
-                line, = plt.plot(x, y, color=colours[0], label=label)
-                self.handles.append(line)
+                self.handles += plot_func.line_plot([list(x)], [list(y)], False, False, colours, label, self.polar)
 
         # add labels to key
         self.ax.legend(handles=self.handles)
 
-        # Redraws gridlines and ticks
-        self.ax.xaxis.set_minor_locator(tck.AutoMinorLocator())
-        self.ax.yaxis.set_minor_locator(tck.AutoMinorLocator())
-        self.ax.tick_params(which="minor", length=3, width=0.7)
-        self.ax.tick_params(which="major", length=5, width=1.3)
+        if self.polar:
+            plt.thetagrids(range(0, 360, 15))
+            self.ax.set_theta_zero_location("N")
+            self.ax.xaxis.set_minor_locator(tck.AutoMinorLocator(3))
+            self.ax.yaxis.set_minor_locator(tck.AutoMinorLocator())
+            self.ax.tick_params(which="minor", length=3, width=0.7)
+            self.ax.tick_params(which="major", length=5, width=1.3)
+            plt.grid(linewidth=0.8, color="darkgrey")
+            plt.grid(linewidth=0.4, color="gainsboro", which="minor")
+        else:
+            # Redraws gridlines and ticks
+            self.ax.xaxis.set_minor_locator(tck.AutoMinorLocator())
+            self.ax.yaxis.set_minor_locator(tck.AutoMinorLocator())
+            self.ax.tick_params(which="minor", length=3, width=0.7)
+            self.ax.tick_params(which="major", length=5, width=1.3)
 
-        plt.grid(linewidth=0.8, color="darkgrey")
-        plt.grid(linewidth=0.4, color="gainsboro", which="minor")
+            plt.grid(linewidth=0.8, color="darkgrey")
+            plt.grid(linewidth=0.4, color="gainsboro", which="minor")
 
     def edit_lines(self):
         """
@@ -403,7 +462,7 @@ class ModelWindow(qtw.QWidget):
 
         options = []
         for input_box in self.input_boxes:
-            val = model_func.convert_to_number(input_box.text())
+            val = convert_to_number(input_box.text())
             if val is not False:  # check if data is numeric
                 options.append(val)
             else:
@@ -704,11 +763,30 @@ class RangeWindow(qtw.QWidget):
                 qtw.QMessageBox.StandardButton.Ok)
 
 
-def main():
+def run_cartesian():
     app = qtw.QApplication([])
     window = GraphWindow()
     window.show()
     app.exec()
+
+
+def run_polar():
+    app = qtw.QApplication([])
+    window = GraphWindow(polar=True)
+    window.show()
+    app.exec()
+
+
+def main():
+    app = qtw.QApplication([])
+    window = GraphOptionsWindow()
+    window.show()
+    app.exec()
+    match window.to_run:
+        case "Cartesian":
+            run_cartesian()
+        case "Polar":
+            run_polar()
 
 
 if __name__ == "__main__":
