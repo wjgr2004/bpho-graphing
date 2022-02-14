@@ -358,6 +358,7 @@ class GraphWindow(qtw.QMainWindow):
         if self.polar:
             plt.thetagrids(range(0, 360, 15))
             self.ax.set_theta_zero_location("N")
+            self.ax.set_theta_direction(-1)
             self.ax.xaxis.set_minor_locator(tck.AutoMinorLocator(3))
             self.ax.yaxis.set_minor_locator(tck.AutoMinorLocator())
             self.ax.tick_params(which="minor", length=3, width=0.7)
