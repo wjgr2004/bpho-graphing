@@ -44,7 +44,18 @@ def check_extended_exponential(a, r, c):
     return True
 
 
+def quadratic(a, b, c, min_val, max_val):
+    x = np.linspace(min_val, max_val, 2000)
+    y = a * x ** 2 + b * x + c
+    return x, y
+
+
+def quadratic_label(a, b, c):
+    return f"{a}x^2 + {b}x + {c}"
+
+
 models_dict = {
     "y = mx + c": [linear, linear_label, any_numbers, ["m", "c"]],
-    "y = ar^x + c": [extended_exponential, extended_exponential_label, check_extended_exponential, ["a", "r", "c"]]
+    "y = ar^x + c": [extended_exponential, extended_exponential_label, check_extended_exponential, ["a", "r", "c"]],
+    "y = ax^2 + bx + c": [quadratic, quadratic_label, any_numbers, ["a", "b", "c"]]
 }

@@ -76,7 +76,7 @@ class GraphWindow(qtw.QMainWindow):
         self.colours = colours.colours
 
         # Window Settings
-        self.setFixedSize(230, 450)
+        self.setFixedSize(230, 460)
         self.setWindowTitle("Graph Generator")
 
         # Window Widgets
