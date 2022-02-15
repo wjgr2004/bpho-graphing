@@ -125,7 +125,10 @@ def smoothed_plot(x, y, show_best_fit, show_rank, colours, label, polar):
     vals = list(zip(x2, y2))
     vals.sort(key=lambda a: a[0])
 
-    x3 = np.linspace(min(x2), max(x2), round((len(x2) ** (2/3)) / 1.6))
+    if len(x2) > 500:
+        x3 = np.linspace(min(x2), max(x2), round((len(x2) ** (2/3)) / 1.6))
+    else:
+        x3 = np.linspace(min(x2), max(x2), round((len(x2) ** (3 / 4)) / 1.6))
 
     x4 = [[]]
     y4 = [[]]
