@@ -127,8 +127,10 @@ def smoothed_plot(x, y, show_best_fit, show_rank, colours, label, polar):
 
     if len(x2) > 500:
         x3 = np.linspace(min(x2), max(x2), round((len(x2) ** (2/3)) / 1.6))
-    else:
+    elif len(x2) > 150:
         x3 = np.linspace(min(x2), max(x2), round((len(x2) ** (3 / 4)) / 1.6))
+    else:
+        x3 = np.linspace(min(x2), max(x2), math.ceil((len(x2)/1.6)))
 
     x4 = [[]]
     y4 = [[]]
@@ -147,11 +149,30 @@ def smoothed_plot(x, y, show_best_fit, show_rank, colours, label, polar):
             current += 1
             y_values = []
 
+    if y_values:
+        x4[-1].append(statistics.mean((x3[current - 1], x3[current])))
+        y4[-1].append(statistics.mean(y_values))
+
     if not x4[-1]:
         x4.pop()
         y4.pop()
 
-    handles = line_plot(x4, y4, show_best_fit, show_rank, colours, label, polar)
+    if polar:
+        x5 = []
+        y5 = []
+        for x_sec, y_sec in zip(x4, y4):
+            x5.append([])
+            y5.append([])
+            for i in range(len(x_sec) - 1):
+                x5[-1] += list(np.linspace(x_sec[i], x_sec[i+1], 4))[:-1]
+                y5[-1] += list(np.linspace(y_sec[i], y_sec[i+1], 4))[:-1]
+            x5[-1].append(x_sec[-1])
+            y5[-1].append(y_sec[-1])
+
+        handles = line_plot(x5, y5, show_best_fit, show_rank, colours, label, polar)
+
+    else:
+        handles = line_plot(x4, y4, show_best_fit, show_rank, colours, label, polar)
 
     return handles
 
