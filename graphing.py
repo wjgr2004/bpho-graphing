@@ -9,6 +9,7 @@ import model_functions as model_func
 import plotting_functions as plot_func
 import graphing_colours as colours
 from graphing_functions import convert_to_number
+from graphing_interface import NormalGraph, PolarGraph
 
 
 class GraphOptionsWindow(qtw.QMainWindow):
@@ -63,14 +64,10 @@ class GraphWindow(qtw.QMainWindow):
         self.lines = []
 
         # Set up graph
-        plt.style.use("seaborn-whitegrid")
         if polar:
-            self.fig, self.ax = plt.subplots(figsize=(11, 11), layout="constrained", subplot_kw={"projection": "polar"})
-            # plt.gca().set_aspect('equal', adjustable='box')
+            self.graph = PolarGraph()
         else:
-            self.fig, self.ax = plt.subplots(figsize=(14, 10), layout="constrained")
-        plt.ion()
-        plt.show()
+            self.graph = NormalGraph()
 
         self.cycle = 0
         self.colours = colours.colours
@@ -145,8 +142,12 @@ class GraphWindow(qtw.QMainWindow):
         self.edit_button.clicked.connect(self.edit_lines)
         self.options_layout.addWidget(self.edit_button, 1, 0)
 
-        self.edit_title_button = qtw.QPushButton("Edit Title")
-        self.edit_title_button.clicked.connect(self.edit_titles)
+        if polar:
+            self.edit_title_button = qtw.QPushButton("Edit Title")
+            self.edit_title_button.clicked.connect(self.edit_title_polar)
+        else:
+            self.edit_title_button = qtw.QPushButton("Edit Titles")
+            self.edit_title_button.clicked.connect(self.edit_titles)
         self.options_layout.addWidget(self.edit_title_button, 1, 1)
 
         self.model_layout = qtw.QHBoxLayout()
@@ -271,7 +272,7 @@ class GraphWindow(qtw.QMainWindow):
                     # add new line to lines
                     self.lines.insert(0, [
                         x, y, self.line_button.isChecked(), self.rank_button.isChecked(),
-                        colours, name, self.polar, plot_func.plotting_dict[self.drop_line_type.currentText()], "data"])
+                        colours, name, self.drop_line_type.currentText(), "data"])
 
                     # update range for models
                     if self.max is not None:
@@ -282,7 +283,7 @@ class GraphWindow(qtw.QMainWindow):
                         self.min = min(*x_list)
 
                     # redraw graph
-                    self.ax.clear()
+                    self.graph.clear()
                     self.generate_graph()
 
                 else:
@@ -302,19 +303,9 @@ class GraphWindow(qtw.QMainWindow):
 
         self.cycle = 0
         self.lines = []
-        self.ax.clear()
+        self.graph.clear()
         self.max = None
         self.min = None
-
-        if self.polar:
-            plt.thetagrids(range(0, 360, 15))
-            self.ax.set_theta_zero_location("N")
-            self.ax.xaxis.set_minor_locator(tck.AutoMinorLocator(3))
-            self.ax.yaxis.set_minor_locator(tck.AutoMinorLocator())
-            self.ax.tick_params(which="minor", length=3, width=0.7)
-            self.ax.tick_params(which="major", length=5, width=1.3)
-            plt.grid(linewidth=0.8, color="darkgrey")
-            plt.grid(linewidth=0.4, color="gainsboro", which="minor")
 
     def add_model(self):
         """
@@ -344,36 +335,13 @@ class GraphWindow(qtw.QMainWindow):
         for line in reversed(self.lines):
             if line[-1] == "data":  # if line is from data
                 # plots data with function in plotting_functions
-                self.handles += line[-2](*line[:-2])
+                self.graph.general_plot(*line[:-1])
 
             elif self.max is not None:
                 label, draw_func, options, colours, _ = line
                 x, y = draw_func(*options, self.min, self.max)
 
-                self.handles += plot_func.line_plot([list(x)], [list(y)], False, False, colours, label, self.polar)
-
-        # add labels to key
-        self.ax.legend(handles=self.handles)
-
-        if self.polar:
-            plt.thetagrids(range(0, 360, 15))
-            self.ax.set_theta_zero_location("N")
-            self.ax.set_theta_direction(-1)
-            self.ax.xaxis.set_minor_locator(tck.AutoMinorLocator(3))
-            self.ax.yaxis.set_minor_locator(tck.AutoMinorLocator())
-            self.ax.tick_params(which="minor", length=3, width=0.7)
-            self.ax.tick_params(which="major", length=5, width=1.3)
-            plt.grid(linewidth=0.8, color="darkgrey")
-            plt.grid(linewidth=0.4, color="gainsboro", which="minor")
-        else:
-            # Redraws gridlines and ticks
-            self.ax.xaxis.set_minor_locator(tck.AutoMinorLocator())
-            self.ax.yaxis.set_minor_locator(tck.AutoMinorLocator())
-            self.ax.tick_params(which="minor", length=3, width=0.7)
-            self.ax.tick_params(which="major", length=5, width=1.3)
-
-            plt.grid(linewidth=0.8, color="darkgrey")
-            plt.grid(linewidth=0.4, color="gainsboro", which="minor")
+                self.graph.line_plot([list(x)], [list(y)], False, False, label, colour=colours)
 
     def edit_lines(self):
         """
@@ -395,6 +363,14 @@ class GraphWindow(qtw.QMainWindow):
         self.title_window = TitleWindow(self)
         self.in_window = True
         self.title_window.show()
+
+    def edit_title_polar(self):
+        # Prevent multiple popups appearing
+        if self.in_window:
+            return
+        text, ok = qtw.QInputDialog.getText(self, "Change Title", "New Title:")
+        if ok:
+            self.graph.set_title(text)
 
     def edit_range(self):
         # Prevent multiple popups appearing
@@ -645,7 +621,7 @@ class LineEditWindow(qtw.QWidget):
         self.redraw_graph()
 
     def redraw_graph(self):
-        self.parent.ax.clear()
+        self.parent.graph.clear()
         self.parent.generate_graph()
 
     def custom_close(self):
@@ -703,9 +679,7 @@ class TitleWindow(qtw.QWidget):
         self.close()
 
     def update_titles(self):
-        self.parent.ax.set_title(self.title.text())
-        self.parent.ax.set_xlabel(self.x_label.text())
-        self.parent.ax.set_ylabel(self.y_label.text())
+        self.parent.graph.set_titles(self.title.text(), self.x_label.text(), self.y_label.text())
 
 
 class RangeWindow(qtw.QWidget):
@@ -755,7 +729,7 @@ class RangeWindow(qtw.QWidget):
             self.parent.min = val1
             self.parent.max = val2
 
-            self.parent.ax.clear()
+            self.parent.graph.clear()
             self.parent.generate_graph()
             self.custom_close()
         else:

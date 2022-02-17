@@ -37,7 +37,7 @@ def scatter_plot(x, y, show_best_fit, rank, colours, label, polar):
 
     handles = []
 
-    if rank:
+    if rank and len(x) > 1:
         r, p = scipy.stats.pearsonr(x2, y2)
         rank_text = f"\nr = {r:.4}, p = {p:.4}"
     else:
@@ -51,7 +51,7 @@ def scatter_plot(x, y, show_best_fit, rank, colours, label, polar):
         line, = plt.plot(x, y, "x", color=colours[0], label=label + rank_text)
     handles.append(line)
 
-    if show_best_fit:
+    if show_best_fit and len(x) > 1:
         min_val = None
         max_val = None
         for x_val in x2:
@@ -130,7 +130,7 @@ def smoothed_plot(x, y, show_best_fit, show_rank, colours, label, polar):
     elif len(x2) > 150:
         x3 = np.linspace(min(x2), max(x2), round((len(x2) ** (3 / 4)) / 1.6))
     else:
-        x3 = np.linspace(min(x2), max(x2), math.ceil((len(x2)/1.6)))
+        x3 = np.linspace(min(x2), max(x2), math.ceil((len(x2)/1.8)))
 
     x4 = [[]]
     y4 = [[]]
@@ -142,7 +142,7 @@ def smoothed_plot(x, y, show_best_fit, show_rank, colours, label, polar):
         else:
             if y_values:
                 x4[-1].append(statistics.mean((x3[current - 1], x3[current])))
-                y4[-1].append(statistics.mean(y_values))
+                y4[-1].append(statistics.fmean(y_values))
             elif x4[-1]:
                 x4.append([])
                 y4.append([])
