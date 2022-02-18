@@ -75,7 +75,7 @@ class NormalGraph:
             self.handles += plot_func.smoothed_plot(x, y, lobf, rank, self.colours[self.cycle], label, False)
             self.cycle += 1
         else:
-            self.handles += plot_func.smoothed_plot(x, y, lobf, rank, colours, label, False)
+            self.handles += plot_func.smoothed_plot(x, y, lobf, rank, colour, label, False)
         self.ax.legend(handles=self.handles)
         self.redraw_graph()
 
@@ -156,7 +156,7 @@ class PolarGraph:
             self.handles += plot_func.smoothed_plot(x, y, lobf, rank, self.colours[self.cycle], label, True)
             self.cycle += 1
         else:
-            self.handles += plot_func.smoothed_plot(x, y, lobf, rank, colours, label, True)
+            self.handles += plot_func.smoothed_plot(x, y, lobf, rank, colour, label, True)
         self.ax.legend(handles=self.handles)
         self.redraw_graph()
 

@@ -1,6 +1,4 @@
 import statistics
-import matplotlib.pyplot as plt
-import matplotlib.ticker as tck
 import csv
 from PyQt6 import QtWidgets as qtw
 from functools import partial
@@ -266,13 +264,13 @@ class GraphWindow(qtw.QMainWindow):
                     else:
                         name = f"{y_name} vs {x_name}"
 
-                    colours = self.colours[self.cycle]
+                    new_colours = self.colours[self.cycle]
                     self.cycle = (self.cycle + 1) % len(self.colours)
 
                     # add new line to lines
                     self.lines.insert(0, [
                         x, y, self.line_button.isChecked(), self.rank_button.isChecked(),
-                        colours, name, self.drop_line_type.currentText(), "data"])
+                        new_colours, name, self.drop_line_type.currentText(), "data"])
 
                     # update range for models
                     if self.max is not None:
