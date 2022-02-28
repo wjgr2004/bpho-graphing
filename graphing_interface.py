@@ -172,7 +172,7 @@ class PolarGraph:
 
 
 class Animation2DWindow:
-    def __init__(self, size):
+    def __init__(self, size, object_count):
         self.circles = []
         self.size = size
 
@@ -185,10 +185,11 @@ class Animation2DWindow:
         self.ax.set(xlim=(-size, size), ylim=(-size, size))
         self.redraw_graph()
 
-        x = [1, 0, -1]
-        y = [1, 0, -1]
-        c = [0, 1, 2]
-        self.ln = self.ax.scatter(x, y, c=c, s=[740, 740, 740], animated=True, cmap=cm.jet)
+        x = [0] * object_count
+        y = [0] * object_count
+        c = np.linspace(0, 1, object_count)
+        s = [1] * object_count
+        self.ln = self.ax.scatter(x, y, c=c, s=s, animated=True, cmap=cm.jet)
         plt.show(block=False)
         plt.pause(0.01)
         self.bg = self.fig.canvas.copy_from_bbox(self.fig.bbox)
@@ -202,35 +203,19 @@ class Animation2DWindow:
         plt.grid(linewidth=0.8, color="darkgrey")
         plt.grid(linewidth=0.4, color="gainsboro", which="minor")
 
-    def draw_circles(self):
+    def draw_circles(self, xy, r):
         self.fig.canvas.restore_region(self.bg)
-        xy = np.zeros((len(self.circles), 2))
-        r = np.zeros(len(self.circles))
-        c = np.zeros(len(self.circles))
-        for i, (x_val, y_val, r_val, c_val) in enumerate(self.circles):
-            xy[i] = (x_val, y_val)
-            r[i] = (r_val / self.size * 740) ** 2
-            c[i] = c_val
+        r = (r / self.size * 680) ** 2
         self.ln.set_offsets(xy)
         self.ln.set_sizes(r)
-        self.ln.set_colors = c
         self.ax.draw_artist(self.ln)
         self.fig.canvas.blit(self.fig.bbox)
         self.fig.canvas.flush_events()
         plt.pause(0.01)
 
-    def process_frame(self, circles):
-        self.circles = circles
-        self.draw_circles()
+    def process_frame(self, xy, r):
+        self.draw_circles(xy, r)
 
     def freeze(self):
         while True:
-            self.draw_circles()
-
-
-if __name__ == "__main__":
-    window = Animation2DWindow(2)
-    for i in range(1000):
-        window.process_frame([[random.random() * 2 - 1, random.random() * 2 - 1, 0.1, 0],
-                              [random.random() * 2 - 1, random.random() * 2 - 1, 0.1, 1]])
-    window.freeze()
+            plt.pause(0.01)
